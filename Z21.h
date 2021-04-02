@@ -22,8 +22,6 @@
 
 class Z21 {
 
-	// e
-
   public:
   
 	// Empfang von Z21-Meldungen
