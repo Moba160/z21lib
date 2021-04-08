@@ -279,18 +279,16 @@ void Z21::LAN_X_GET_LOCO_INFO(int addr) {
   trace(toZ21, diffLastSentReceived, "LAN_X_GET_LOCO_INFO", "Adresse=" + String(addr));  
 }
 
-// // ----------------------------------------------------------------------------------------------------
-// //
+// ----------------------------------------------------------------------------------------------------
+//
 
-// void Z21::LAN_X_CV_POM_WRITE_BYTE(int addr, int cv, byte value) {
+void Z21::LAN_X_CV_POM_WRITE_BYTE(int addr, int cv, byte value) {
 	  
-//   cv--;
-//   byte bytes[] = { 0x0c, 0x00, 0x40, 0x00, (byte)0xe6, 0x30, (byte)(addr / 256), (byte)(addr % 256), (byte)((cv / 256) | 0xec), ((byte)(cv % 256)), value, 0};
-//   sendCommand(bytes, bytes[0], XOR);
-//   if (traceOn) {
-//     z21State.trace(TO_Z21, diffLastSentReceived, "LAN_X_CV_POM_WRITE_BYTE", "Adresse=" + String(addr) + ", CV=" + String(cv+1) + ", Wert=" + String(value));
-//   }
-// }
+  cv--;
+  byte bytes[] = { 0x0c, 0x00, 0x40, 0x00, (byte)0xe6, 0x30, (byte)(addr / 256), (byte)(addr % 256), (byte)((cv / 256) | 0xec), ((byte)(cv % 256)), value, 0};
+  sendCommand(bytes, bytes[0], XOR);
+  trace(toZ21, diffLastSentReceived, "LAN_X_CV_POM_WRITE_BYTE", "Adresse=" + String(addr) + ", CV=" + String(cv+1) + ", Wert=" + String(value));
+}
 
 // ----------------------------------------------------------------------------------------------------
 //
@@ -622,7 +620,12 @@ void Z21::receive() {
 // ====================================================================================================
 
 void Z21::trace(FromToZ21 direction, long diffLastSentReceived, String message, String parameters) {
-
+  Serial.printf("%s %ldms %s (%s)\n", 
+    direction == toZ21 ? ">" : "  <",
+    diffLastSentReceived,
+    message.c_str(),
+    parameters.c_str()
+    );
 }
 
 // ----------------------------------------------------------------------------------------------------

@@ -1,0 +1,21 @@
+
+{
+  "name": "z21lib",
+  "version": "1.0.1",
+  "description": "Library to access Z21-like digital command stations (Z21, DR5000, MD XP)",
+  "keywords": "z21, dr5000, api",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/Moba160/z21lib.git"
+  },
+  "authors":
+  [
+
+  ],
+  "license": "LGPL-2.1-or-later",
+  "dependencies": {
+  },
+  "frameworks": "*",
+  "platforms": "*"
+  }

@@ -91,8 +91,8 @@ class Z21 {
 	// Lokinfo abfragen
 	static void LAN_X_GET_LOCO_INFO(int addr);
 	  
-// 	  // POM Write
-// 	  static void LAN_X_CV_POM_WRITE_BYTE(int addr, int cv, byte value);
+	// POM Write
+	static void LAN_X_CV_POM_WRITE_BYTE(int addr, int cv, byte value);
 	  
 	// CV Write
 	static void LAN_X_CV_WRITE(int cv, byte value);
