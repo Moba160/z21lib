@@ -114,6 +114,10 @@ class Z21 {
 	
 	static boolean emergencyStop;
 	static boolean shortCircuit;
+	static String currProg;
+	static String temp;
+	static bool lowVoltage;
+	static bool highTemp;
 
 	static long lastReceived;
 	
@@ -138,6 +142,8 @@ class Z21 {
 		static void notifyProgResult(ProgResult result, int value);
 		static void notifyLocoInfoChanged(int addr, Direction dir, int fst, bool takenOver, int numSpeedSteps, bool f[]);
 		static void notifyAccessoryStateChanged(int addr, bool plus);
+		static void notifyTraceEvent(FromToZ21 direction, long diffLastSentReceived, String message, String parameters);
+
 
 		static bool trackPowerOff;
 	  	static boolean progStateOff;

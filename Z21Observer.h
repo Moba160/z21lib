@@ -1,6 +1,7 @@
 #ifndef Z21OBSERVER_H
 #define Z21OBSERVER_H
 
+#include <Arduino.h>
 #include <Z21Types.h>
 
 /*
@@ -16,6 +17,8 @@ class Z21Observer {
         virtual void progResult(ProgResult result, int value) {}
         virtual void locoInfoChanged(int addr, Direction dir, int fst, bool takenOver, int numSpeedSteps, bool f[]) {};
         virtual void accessoryStateChanged(int addr, bool plus) {};
+        virtual void traceEvent(FromToZ21 direction, long diffLastSentReceived, String message, String parameters) {};
+
 
 };
 

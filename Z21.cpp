@@ -15,6 +15,8 @@ long Z21::lastReceived = -Z21_HEARTBEAT;
 
 String Z21::ipAddress;
 
+#define yetUnknownNumeric -1
+
 String Z21::hwVersion = yetUnknown;
 bool Z21::trackPowerOff = true;
 bool Z21::progStateOff = true;
@@ -24,6 +26,10 @@ String Z21::csID = yetUnknown;
 String Z21::serialNbr = yetUnknown;
 String Z21::fwVersion = yetUnknown;
 String Z21::currMain = yetUnknown;
+String Z21::currProg = yetUnknown;
+String Z21::temp = yetUnknown;
+bool Z21::lowVoltage = yetUnknownNumeric;
+bool Z21::highTemp = yetUnknownNumeric;
 boolean Z21::emergencyStop;
 boolean Z21::shortCircuit;
 
@@ -95,6 +101,29 @@ String Z21::getIPAddress() {
 uint16_t Z21::heartbeat() {
   trace(toZ21, diffLastSentReceived, "Lebenszeichen", "");
   LAN_X_GET_STATUS();
+  delay(50);
+  LAN_SYSTEMSTATE_GETDATA();
+
+  if (xbusVersion == yetUnknown) {
+    delay(50);
+    LAN_X_GET_VERSION();
+  }
+  if (fwVersion == yetUnknown) {
+    delay(50);
+    LAN_X_GET_FIRMWARE_VERSION();
+  }
+  if (hwVersion == yetUnknown) {
+    delay(50);
+    LAN_GET_HWINFO();
+  }
+  if (serialNbr == yetUnknown) {
+    delay(50);
+    LAN_GET_SERIAL_NUMBER();
+  }
+  if (!flagsValid) {
+    delay(50);
+    LAN_GET_BROADCASTFLAGS();
+  }
 
   // Nach Z21_HEARTBEAT erneut aufrufen:
   // "Es wird erwartet, dass ein Client 1x pro Minute kommuniziert, da er sonst
@@ -108,16 +137,7 @@ uint16_t Z21::heartbeat() {
 
 void Z21::init() {
   LAN_SET_BROADCASTFLAGS(3, 0, 1, 0); // 3: on/off/prog/loco/access, 1: loco info auch für alle geänderte Loks
-  delay(50);
-  LAN_X_GET_STATUS();
-  delay(50);
-  LAN_X_GET_FIRMWARE_VERSION();
-  delay(50);
-  LAN_X_GET_VERSION();
-  delay(50);
-  LAN_GET_HWINFO();
-  delay(50);
-  LAN_GET_SERIAL_NUMBER();
+
 }
 
 // ----------------------------------------------------------------------
@@ -265,7 +285,7 @@ void Z21::LAN_X_SET_LOCO_FUNCTION(int addr, int func, bool plus) {
   byte bytes[] = { 0x0a, 0x00, 0x40, 0x00, (byte)0xe4, (byte)0xf8, (byte)((addr / 256) | (addr > 128 ? 0xC0 : 0)), (byte)(addr % 256), data, 0};
   sendCommand(bytes, bytes[0], XOR);
 
-	sprintf(s, "Adresse=%d Funktion=%d Lage=%d", addr, func, plus);
+	sprintf(s, "Adresse=%d Funktion=%d Zustand=%d", addr, func, plus);
   trace(toZ21, diffLastSentReceived, "LAN_X_SET_LOCO_FUNCTION", String(s));  
 }
 
@@ -420,7 +440,7 @@ void Z21::receive() {
 
     // LAN_X_STATUS_CHANGED ?
     } else if (buf[0] == 0x08 && buf[2] == 0x40 && buf[4] == 0x62 && buf[5] == 0x22) {
-      emergencyStop = (buf[6] & 0x01) > 0;
+
       bool trackVoltageOffReceived = (buf[6] & 0x02) > 0;
       shortCircuit = (buf[6] & 0x04) > 0;
       bool progStateOn = (buf[6] & 0x20) > 0;
@@ -466,13 +486,31 @@ void Z21::receive() {
 
   // Antwort auf LAN_SYSTEMSTATE_GETDATA oder wenn LAN_SET_BROADCASTFLAGS Flag 0x00000100 gesetzt hat
   } else if (buf[2] == 0x84 && buf[3] == 0x00) {
-      currMain = String(buf[5] * 256 + buf[4]);
-      trace(fromZ21, diffLastSentReceived, "LAN_SYSTEMSTATE_DATACHANGED", ""); //: Strom Hauptgleis = % d mA\n", currMain.c_str());      
+      currMain = String(buf[5] * 256 + buf[4]) + "mA";
+      currProg = String(buf[5] * 256 + buf[6]) + "mA";
+      temp = String(buf[5] * 256 + buf[10]) + "&deg;C";
+      lowVoltage = (buf[17] & 0x02) > 0;
+      highTemp = (buf[17] & 0x01) > 0;
+
+      emergencyStop = (buf[16] & 0x01) > 0;
+      trackPowerOff = (buf[16] & 0x02) > 0;
+      shortCircuit = (buf[16] & 0x04) > 0;
+      progStateOff = !((buf[16] & 0x20) > 0);
+      trace(fromZ21, diffLastSentReceived, "LAN_SYSTEMSTATE_DATACHANGED", 
+      "Strom Hauptgl=" + currMain +
+      ", Strom Proggleis=" + currProg +
+      ", Temperatur=" + temp + 
+      ", Temp zu hoch=" + (highTemp ? "Ja" : "Nein") +
+      ", Spannung zu niedrig=" + (lowVoltage ? "Ja" : "Nein") +
+      ", Gleissp=" + (trackPowerOff ? "Aus" : "Ein") + 
+      ", Nothalt=" + (emergencyStop ? "Ja" : "Nein") + 
+      ", Kurzschl=" + (shortCircuit ? "Ja" : "Nein") +
+      ", ProgrModus=" + (progStateOff ? "Ja" : "Nein"));      
 
 	// LAN_BROADCASTFLAGS? Kommando ist allerdings (so) nicht benannt
   } else if (buf[0] == 0x08 && buf[2] == 0x51) {
 
-    flagsValid = true;
+   flagsValid = true;
 
     BCF_BASIC = (buf[4] & 0x01) > 0;
     BCF_RBUSFB = (buf[4] & 0x02) > 0;
@@ -503,6 +541,7 @@ void Z21::receive() {
         String(BCF_LNFB ? "Loconet feedback LAN_LOCONET_DETECTOR" : "")
         ); 
 
+  // Antwort auf LAN_GET_HWINFO
   } else if (buf[0] == 0x0c && buf[2] == 0x1a) {
 
     switch (buf[4]) {
@@ -620,12 +659,15 @@ void Z21::receive() {
 // ====================================================================================================
 
 void Z21::trace(FromToZ21 direction, long diffLastSentReceived, String message, String parameters) {
+
+  notifyTraceEvent(direction, diffLastSentReceived, message, parameters);
+
   Serial.printf("%s %ldms %s (%s)\n", 
-    direction == toZ21 ? ">" : "  <",
+    direction == toZ21 ? ">" : "<",
     diffLastSentReceived,
     message.c_str(),
     parameters.c_str()
-    );
+  );
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -673,6 +715,14 @@ void Z21::notifyProgResult(ProgResult result, int value) {
   for (int i=0; i<numObservers; i++) 
 		if (observers[i] != 0) 
 				observers[i]->progResult(result, value);
+}
+
+// ----------------------------------------------------------------------------------------------------
+//
+void Z21::notifyTraceEvent(FromToZ21 direction, long diffLastSentReceived, String message, String parameters) {
+  for (int i=0; i<numObservers; i++) 
+		if (observers[i] != 0) 
+				observers[i]->traceEvent(direction, diffLastSentReceived, message, parameters);  
 }
 
 
