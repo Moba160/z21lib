@@ -103,6 +103,8 @@ class Z21 {
 	static void setIPAddress(String ipAddr);
 	static String getIPAddress();
 
+	static void setAddrOffs(int offs) {addrOffs = offs; }
+
 	static String ipAddress;
 	
 	static String xbusVersion;
@@ -153,6 +155,8 @@ class Z21 {
 		static void sendCommand(byte bytes[], int len, bool addXOR);
 		static void insertChecksum(byte bytes[], int len); 
 		static int lastControlledAddress;
+
+		static int addrOffs;
 
 		// ---------- Anzahl und Liste der Observer 
         static int numObservers;
