@@ -254,11 +254,11 @@ void Z21::LAN_X_SET_TURNOUT(int addr, bool plus) {
 //
 
 void Z21::LAN_X_SET_LOCO_DRIVE(int addr, Direction dir, int speed) {
-	locoDrive(addr + addrOffs, dir, speed, true);
+	locoDrive(addr, dir, speed, true);
 }
 
 void Z21::locoStop(int addr, Direction dir) {
-	locoDrive(addr + addrOffs, dir, 1, false);
+	locoDrive(addr, dir, 1, false);
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -271,7 +271,7 @@ void Z21::locoDrive(int addr, Direction dir, int speed, boolean translate) {
   if (translate) {
     if (speed != 0) speed++; // weil Fahrstufe 1 Loknothalt ist: 0->0, 1->2, 2->3, ..., 126->127
   }
-  byte bytes[] = { 0x0a, 0x00, 0x40, 0x00, (byte)0xe4, 0x13, (byte)((addr / 256) | (addr > 128 ? 0xC0 : 0)), (byte)(addr % 256), (byte)((dir == Direction::Forward ? 128 : 0) + speed), 0};
+  byte bytes[] = { 0x0a, 0x00, 0x40, 0x00, (byte)0xe4, 0x13, (byte)(((addr+addrOffs) / 256) | (addr > 128 ? 0xC0 : 0)), (byte)((addr+addrOffs) % 256), (byte)((dir == Direction::Forward ? 128 : 0) + speed), 0};
   
   sendCommand(bytes, 10, XOR);
 	sprintf(s, "Adresse=%d Richtung=%s Fahrstufe=%d", addr, dir == Direction::Forward ? "V" : "R", speed);
@@ -287,8 +287,7 @@ void Z21::LAN_X_SET_LOCO_FUNCTION(int addr, int func, bool plus) {
   byte data = (byte)((plus ? 1 << 6 : 0) + func);
   byte bytes[] = { 0x0a, 0x00, 0x40, 0x00, (byte)0xe4, (byte)0xf8, (byte)(((addr + addrOffs) / 256) | (addr > 128 ? 0xC0 : 0)), (byte)((addr + addrOffs) % 256), data, 0};
   sendCommand(bytes, bytes[0], XOR);
-
-	sprintf(s, "Adresse=%d Funktion=%d Zustand=%d", addr, func, plus);
+  sprintf(s, "Adresse=%d Funktion=%d Zustand=%d", addr, func, plus);
   trace(toZ21, diffLastSentReceived, "LAN_X_SET_LOCO_FUNCTION", String(s));  
 }
 
