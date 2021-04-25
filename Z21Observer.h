@@ -12,8 +12,10 @@ class Z21Observer {
 
     public:
 
-        virtual void trackPowerStateChanged(bool trackPowerOff) {};
-        virtual void progModeStateChanged(bool progModeOff) {};
+        virtual void trackPowerStateChanged(BoolState trackPowerState) {};
+        virtual void shortCircuitStateChanged(BoolState shortCircuitState) {};
+        virtual void emergencyStopStateChanged(BoolState emergencyStopState) {};
+        virtual void progStateChanged(BoolState progState) {};
         virtual void progResult(ProgResult result, int value) {}
         virtual void locoInfoChanged(int addr, Direction dir, int fst, bool takenOver, int numSpeedSteps, bool f[]) {};
         virtual void accessoryStateChanged(int addr, bool plus) {};

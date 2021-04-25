@@ -50,10 +50,16 @@ class Z21 {
 	static void LAN_SYSTEMSTATE_GETDATA();
 	
 	// Gleisspannungszustand abfragen
-	static bool isTrackPowerOff() { return trackPowerOff; }
+	static BoolState getTrackPowerState() { return trackPowerState; }
+
+	// Nothaltzustand abfragen
+	static BoolState getEmergencyStopState() { return emergencyStopState; }
+
+	// Kurzschlusszustand abfragen
+	static BoolState getShortCircuitState() { return shortCircuitState; }
 
 	// Programmierstatus abfragen
-	static bool isProgStateOff() { return progStateOff; }
+	static BoolState getProgState() { return progState; }
 
 	// Seriennummer abfragen
 	static void LAN_GET_SERIAL_NUMBER();
@@ -105,6 +111,9 @@ class Z21 {
 
 	static void setAddrOffs(int offs) {addrOffs = offs; }
 
+
+	static String toString(BoolState state, String onLabel = "Ein", String offLabel = "Aus");
+
 	static String ipAddress;
 	
 	static String xbusVersion;
@@ -114,8 +123,6 @@ class Z21 {
 	static String currMain;
 	static String hwVersion;
 	
-	static boolean emergencyStop;
-	static boolean shortCircuit;
 	static String currProg;
 	static String temp;
 	static bool lowVoltage;
@@ -139,18 +146,34 @@ class Z21 {
 	private:
 
 		// Leiten entsprechende Notifikationen an alle Observer weiter
-		static void notifyTrackPowerStateChanged(bool trackPowerOff);
-		static void notifyProgModeStateChanged(bool progModeOff);
+		static void notifyTrackPowerStateChanged(BoolState trackPowerState);
+		static void notifyShortCircuitStateChanged(BoolState shortCircuitState);
+		static void notifyEmergencyStopStateChanged(BoolState emergencyStopState);
+		static void notifyProgStateChanged(BoolState progState);
 		static void notifyProgResult(ProgResult result, int value);
 		static void notifyLocoInfoChanged(int addr, Direction dir, int fst, bool takenOver, int numSpeedSteps, bool f[]);
 		static void notifyAccessoryStateChanged(int addr, bool plus);
 		static void notifyTraceEvent(FromToZ21 direction, long diffLastSentReceived, String message, String parameters);
 
+		// Umrechnung von Benutzer gesehener Fst 0..126 in DCC-Fst 0..127 (unsägliche Fst 1 == Nothalt!!!)
+		static int userToDccSpeed(int userSpeed);
+		static int dccToUserSpeed(int dccSpeed);
 
-		static bool trackPowerOff;
-	  	static boolean progStateOff;
+		// Interne Setter (einschl. nachgelagerte Notifikation) - beeinflussen die Z21 nicht!
 
-		static void locoDrive(int addr, Direction dir, int speed, boolean translate);
+		static BoolState trackPowerState;
+		static void setTrackPowerState(BoolState trackPowerState);
+
+	  	static BoolState progState;
+		static void setProgState(BoolState progState); 
+
+		static BoolState emergencyStopState;
+		static void setEmergencyStopState(BoolState emergencyStopState);
+
+		static BoolState shortCircuitState;
+		static void setShortCircuitState(BoolState shortCircuitState);
+
+		static void locoDrive(int addr, Direction dir, int speed);
 
 		static void sendCommand(byte bytes[], int len, bool addXOR);
 		static void insertChecksum(byte bytes[], int len); 
