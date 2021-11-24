@@ -255,25 +255,51 @@ void Z21::LAN_X_SET_TURNOUT(int addr, bool plus) {
 // ----------------------------------------------------------------------------------------------------
 // speed ist hier User Speed 0..126 ohne Nothalt 1
 
-void Z21::LAN_X_SET_LOCO_DRIVE(int addr, Direction dir, int speed) {
-  locoDrive(addr, dir, userToDccSpeed(speed));
-  sprintf(aux, "Adresse=%d Richtung=%s Fahrstufe=%d", addr, dir == Direction::Forward ? "V" : "R", speed);
+void Z21::LAN_X_SET_LOCO_DRIVE(int addr, int numFst, Direction dir, int speed) {
+  locoDrive(addr, numFst, dir, userToDccSpeed(speed));
+  sprintf(aux, "Adresse=%d Richtung=%s Fahrstufe=%d/%d", addr, dir == Direction::Forward ? "V" : "R", speed, numFst);
   trace(toZ21, diffLastSentReceived, "LAN_X_SET_LOCO_DRIVE", String(aux));
 }
 
-void Z21::locoStop(int addr, Direction dir) {
-  locoDrive(addr, dir, 1);
-  sprintf(aux, "Adresse=%d Richtung=%s Fahrstufe=1(Nothalt)", addr, dir == Direction::Forward ? "V" : "R");
+void Z21::locoStop(int addr, int numFst, Direction dir) {
+  locoDrive(addr, numFst, dir, 1);
+  sprintf(aux, "Adresse=%d Richtung=%s Nothalt", addr, dir == Direction::Forward ? "V" : "R");
   trace(toZ21, diffLastSentReceived, "LAN_X_SET_LOCO_DRIVE", String(aux));
 }
 
 // ----------------------------------------------------------------------------------------------------
-// Speed ist hier DCC-Speed 0..127 mit Nothalt 1
+// Speed ist hier DCC-Speed 0..127 mit Nothalt 1 bei 128  Fst
+//                          0..27 bei 28 Fst
+//                          0..13 bei 14 Fst
 // Auch erst hier Umsetzung Gerd-Offset
 
-void Z21::locoDrive(int addr, Direction dir, int speed) {
+void Z21::locoDrive(int addr, int numFst, Direction dir, int speed) {
   lastControlledAddress = addr;
-  byte bytes[] = { 0x0a, 0x00, 0x40, 0x00, (byte)0xe4, 0x13, (byte)(((addr + addrOffs) / 256) | (addr > 128 ? 0xC0 : 0)), (byte)((addr + addrOffs) % 256), (byte)((dir == Direction::Forward ? 128 : 0) + speed), 0};
+  byte fstCoding;
+  byte speedCoding;
+
+  switch(numFst) {
+    case 14:
+      fstCoding= 0x10;
+      speedCoding = (byte)((dir == Direction::Forward ? 128 : 0) + speed); // wie bei 128, nur dass der Wertevorrat von speed kleiner ist
+      break;
+    case 28: { // Block nötig, sonst error: jump to case label, wegen "int halfStep"
+        fstCoding= 0x12;
+        // Weiterhin werden nur die letzten 4 Bit verwendet (Bit0 bis Bit3), so dass das Bit4 missbraucht wird (bei geraden Stufen)
+          int halfStep = speed/2 + 1; // da /2 abrundet, erhalten 2,3 und 4,5 und 6,7 etc. den gleichen Wert. Damit  nicht
+                                      // gleiche Werte rauskommen, wird abwechselnd in Bit4 geschrieben (0b1000)
+          speedCoding = (byte)((dir == Direction::Forward ? 128 : 0) + halfStep);
+        if (speed%2 == 0) {
+          speedCoding |= 0b1000;
+        } 
+      }
+      break;
+    case 128:
+    default:
+      fstCoding= 0x13;
+      speedCoding = (byte)((dir == Direction::Forward ? 128 : 0) + speed);
+  }
+  byte bytes[] = { 0x0a, 0x00, 0x40, 0x00, (byte)0xe4, fstCoding, (byte)(((addr + addrOffs) / 256) | (addr > 128 ? 0xC0 : 0)), (byte)((addr + addrOffs) % 256), speedCoding, 0};
   sendCommand(bytes, 10, XOR);
 }
 
@@ -398,6 +424,7 @@ void Z21::receive() {
 
   static char buf[100];
 
+  // if (Udp.available() > 0) {
   if (Udp.parsePacket() > 0) {
 
     lastReceived = millis();

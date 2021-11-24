@@ -86,10 +86,11 @@ class Z21 {
 	static void LAN_X_GET_TURNOUT_INFO(int addr);
 
 	// Lok mit Adresse <adr> fahren in Richtung <dir> und mit Geschwindigkeit <speed>
-	static void LAN_X_SET_LOCO_DRIVE(int addr, Direction dir, int speed);
+	// numFst = 14/28/128
+	static void LAN_X_SET_LOCO_DRIVE(int addr, int numFst, Direction dir, int speed);
 	
 	// Loknothalt
-	static void locoStop(int addr, Direction dir);
+	static void locoStop(int addr, int numFst, Direction dir);
 	
 	// Lokfunktion setzen
 	static void LAN_X_SET_LOCO_FUNCTION(int addr, int func, bool plus);
@@ -173,7 +174,7 @@ class Z21 {
 		static BoolState shortCircuitState;
 		static void setShortCircuitState(BoolState shortCircuitState);
 
-		static void locoDrive(int addr, Direction dir, int speed);
+		static void locoDrive(int addr, int numFst, Direction dir, int speed);
 
 		static void sendCommand(byte bytes[], int len, bool addXOR);
 		static void insertChecksum(byte bytes[], int len); 
